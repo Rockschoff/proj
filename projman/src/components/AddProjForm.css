@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap');
+.addButton{
+    border:.1rem solid #182145;
+    background-color:#fff;
+    color:#182145;
+    margin-bottom: 2%;
+}
+.addButton:hover{
+    background-color: #182145;
+}
+
+/* Modal CSS */
+.modal-container{
+    font-family: 'Montserrat', sans-serif;
+}
+.input-container{
+    margin: 2% 3%;
+}
+.date-container{
+    display: flex;
+    justify-content: space-evenly; align-items: center;
+}
+.submit-button{
+    background-color: #fff;
+    color: #182145;
+    border-color: #182145;
+}
+.submit-button:hover{
+    background-color: #182145;
+}

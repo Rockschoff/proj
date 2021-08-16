@@ -1,0 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap');
+.member-main-container{
+    font-family: 'Montserrat', sans-serif;
+}
+.memberCard-container{
+    margin-top: 4%;
+    border: .1rem solid #182145;
+    border-radius: 1rem;
+}
+.role-button{
+    margin-top: 4%;
+    background-color: #fff;
+    border-color:#182145 ;
+    
+}

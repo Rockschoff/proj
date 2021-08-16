@@ -1,0 +1,19 @@
+.viewProject-container{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.split-button{
+    background-color: #fff;
+    color: #182145;
+    border: .1rem solid #182145;
+}
+.button{
+    width: 80%;
+}
+.button-2{
+    width:20%;
+}
+.split-button:hover{
+    background-color: #182145;
+}

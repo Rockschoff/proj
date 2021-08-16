@@ -1,0 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap');
+.mail-button{
+    font-family: 'Montserrat', sans-serif;
+    background-color: #fff;
+    color: #182145;
+    border-color: #182145;
+}
+.mail-button:hover{
+    background-color: #182145;
+}

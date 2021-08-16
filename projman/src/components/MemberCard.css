@@ -1,0 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap');
+.listcard-element {
+    width : 100%;
+    justify-content : center;
+    text-align : center; 
+    font-family: "Montserrat",sans-serif;
+    padding:1%;
+}
+.done-btn{
+    background-color: #fff;
+    border: .1rem solid #182145;
+    color: #182145;
+}
+.done-btn:hover{
+    background-color: #182145;
+}
+/* .view-btn{
+    background-color:transparent;
+    color: #182145;
+    border-color: #182145;
+}
+.view-btn:hover{
+    background-color: #182145;
+} */

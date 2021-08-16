@@ -1,0 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap');
+.checkpt-container,.modal-container{
+    font-family: 'Montserrat', sans-serif;
+}
+.submit-button{
+    background-color: #fff;
+    color: #182145;
+    border-color: #182145;
+}
+.submit-button:hover{
+    background-color: #182145;
+}
+.desc-button{
+    margin-bottom: 5%;
+}
