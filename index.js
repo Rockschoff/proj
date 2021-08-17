@@ -5,12 +5,55 @@ const mongoose = require("mongoose");
 const {spawn} = require("child_process")
 const {makeCopy , deleteFile , grantPermission} = require("./makeCopy.js")
 const  path = require("path");
-
+var AWS = require("aws-sdk");
+var hash = require('object-hash');
 
 
 
 
 mongoose.connect("mongodb+srv://admin-rishi:thunderick123@cluster0.9ii9j.mongodb.net/projmanDB" , { useNewUrlParser: true  , useUnifiedTopology: true });
+
+// AWS.config.credential;
+
+AWS.config.update({
+    region: "us-east-2",
+    endpoint: "https://dynamodb.us-east-2.amazonaws.com"
+  });
+
+  console.log("this is creds" , AWS.config.credentials)
+  
+  var dynamodb = new AWS.DynamoDB();
+  
+  var tableParams = {
+      TableName : "Projects",
+      KeySchema: [       
+          { AttributeName: "_id", KeyType: "HASH"},  //Partition key
+      ],
+      AttributeDefinitions: [       
+          { AttributeName: "_id", AttributeType: "S"},  //Partition key
+          
+          // { AttributeName: "year", AttributeType: "N" },
+          // { AttributeName: "title", AttributeType: "S" }
+      ],
+      ProvisionedThroughput: {       
+          ReadCapacityUnits: 10, 
+          WriteCapacityUnits: 10
+      }
+  };
+  
+
+var docClient = new AWS.DynamoDB.DocumentClient();
+
+// dynamodb.createTable(tableParams, function(err, data) {
+//     if (err) {
+//         console.error("Unable to create table. Error JSON:", JSON.stringify(err, null, 2));
+//     } else {
+//         console.log("Created table. Table description JSON:", JSON.stringify(data, null, 2));
+//     }
+// });
+
+console.log("Running the dynamo file")
+
 
 
 const taskSchema = new mongoose.Schema({
@@ -184,28 +227,50 @@ function getIdFromLink(link){
 
 }
 
+
+
+
 async function saveNewProject(obj , user){
   try{
     const link = await getNewSheetLink(user);
 
-    const project =  new Project({
+    const proj =  {
       type : obj.type,
       name : obj.name,
       org : obj.org,
       link : link,
       start : obj.start,
       deadline : obj.deadline,
-      members : obj.members,
+      members : [],
       checkpoints : obj.checkpoints,
       special : obj.special,
       status : obj.status,
       duration : obj.duration,
-      totalExports : 10000,// obj.totalExports,
+      totalExports : obj.totalExports,// obj.totalExports,
       exportsDone : 0,
-    });
+    };
     
+
+    var project = new Project(proj)
+    var random_hash = hash({name : (proj.name + (Math.random() * Math.random()) + Math.random())})
     // console.log(project);
     project.save();
+    proj["_id"] = random_hash;
+    var params = {
+        TableName : "Projects",
+        Item : {
+            "_id" : random_hash,
+            "project" : proj
+        }
+    }
+    docClient.put(params , function(err , data){
+        if(err){
+            console.log("COULD NOT ADD TO DYNAMO");
+            console.log(err)
+        }else{
+            console.log("SUCCESSFULLY ADDED THE THINGS TO DYNAMO")
+        }
+    })
   
   }catch(err){
     console.log("error hai");
@@ -217,7 +282,45 @@ async function saveNewProject(obj , user){
  
 function saveNewMember(obj){
   const member = new Member(obj);
-  AddMemberToProject(member , obj);
+//   AddMemberToProject(member , obj);
+  obj["_id"] = hash({"member" : Math.random()*Math.random()*Math.random()*Math.random()})
+  docClient.get({TableName : "Projects" , Key : {"_id" : obj.project}} ,
+  function(err , data){
+      if(err){
+          console.log(err)
+      }else{
+          var m = data.Item.project.members;
+          m.push(obj);
+          var params = {
+            TableName : "Projects",
+            Key:{
+                "_id" : obj.project,
+            },
+            UpdateExpression : "set #p.#m = :o",
+            ExpressionAttributeValues : {
+                ":o" : m,
+            },
+            ExpressionAttributeNames : {
+                "#p" : "project",
+                "#m" : "members"
+            },
+          //   ExpressionAttributeName : {
+          //       "#m" : "project.members" ,
+          //   },
+            ReturnValues:"UPDATED_NEW"
+        }
+        console.log(params)
+        docClient.update(params, function(err, data) {
+          if (err) {
+              console.error("UNABLE TO UPDATE", JSON.stringify(err, null, 2));
+          } else {
+              console.log("UPDATES!!!!!!!", JSON.stringify(data, null, 2));
+          }
+      });
+          
+      }
+  })
+  
 
 }
 
@@ -257,6 +360,27 @@ function saveNewCheckpoint(obj){
     project[0].checkpoints.push(obj.checkpoint);
     project[0].save();
   } )
+  var params = {
+      TableName : "Projects",
+      Key:{
+          "_id" : obj.project,
+      },
+      UpdateExpression : "set list_append(project.checkpoints , :c)",
+      ExpressionAttributeValues:{
+          ":c" : obj.checkpoint,
+      },
+      ReturnValues:"UPDATED_NEW"
+  }
+  docClient.update(params , function(err , data){
+      if(err){
+          console.log("UNABLE TO UPDATE CHECKPOINTS");
+          console.log(err)
+      }else{
+          console.log("UPDATE!!!!! checkpoints" , data);
+
+      }
+  });
+  
 }
 
 function AddCheckPoints(){
@@ -317,23 +441,34 @@ function DeleteProject(obj ){
   console.log("deleting.....")
   console.log(obj.project)
   console.log(obj)
-  Project.find({_id : obj.project} , function(err , projects){
-    if(err){
-      console.log(err)
-    }else{
-      console.log(projects[0])
-      console.log(projects[0].link)
+  
 
-      const link = projects[0].link
-      let sheet = getIdFromLink(link)
-      deleteFile(sheet)
-    }
+  
+  
+  var params = {
+      TableName : "Projects",
+      Key : {
+          "_id" : obj.project,
+      }
+  }
+  docClient.get(params , function(err , data){
+      if(err){
+          console.log("didn't find project while deletion")
+      }else{
+          var link = data.Item.project.link;
+          let sheet = getIdFromLink(link)
+          deleteFile(sheet)
+        // console.log(data)
+
+      }
   })
-  Project.deleteOne({_id : obj.project} , function(err){
-    if(err){
-      console.log(err);
-    }
-  } )
+  docClient.delete(params  , function(err , data){
+      if(err){
+          console.log("could not delete from dynamo");
+      }else{
+          console.log("SUCCESS in DELETION");
+      }
+  });
 
 }
 
@@ -349,17 +484,23 @@ function EditMember(obj){
     }
   }
   console.log(newObj)
-  Project.find({_id : obj.project} , function(err , projects){
-    projects[0].members.forEach((member)=>{
-        if(member._id == obj.member){
-          for(key in newObj){
-            member[key] = newObj[key];
-          }
-        }
-    })
-    projects[0].save()
+//   Project.find({_id : obj.project} , function(err , projects){
+//     projects[0].members.forEach((member)=>{
+//         if(member._id == obj.member){
+//           for(key in newObj){
+//             member[key] = newObj[key];
+//           }
+//         }
+//     })
+//     projects[0].save()
 
-  })
+//   })
+  var params = {
+      TableName : "Projects",
+      Key : {
+          "_id" : obj.proj
+      }
+  }
 }
 
 function EditProject(obj){
@@ -374,12 +515,50 @@ function EditProject(obj){
     }
   }
   console.log(newObj)
+//   try{
+//     Project.updateOne({_id : obj.project} , newObj , function(err){
+//         if(err){
+//           console.log(err);
+//         }
+//       })
+//   }catch(err){}
 
-  Project.updateOne({_id : obj.project} , newObj , function(err){
-    if(err){
-      console.log(err);
-    }
-  })
+  
+  for(const name in newObj){
+      var params = {
+          TableName : "Projects",
+          Key : {
+              "_id" : obj.project,
+          },
+          UpdateExpression : "set #p.#n = :i",
+          ExpressionAttributeValues : {
+              ":i" : newObj[name],
+          },
+          ExpressionAttributeNames : {
+              "#p" : "project",
+              "#n" : name,
+          },
+          ReturnValues:"UPDATED_NEW"
+      }
+      if(name != "project"){
+        docClient.update(params , function(err , data){
+            if(err){
+                console.log("Could not update project");
+                console.log(err)
+            }else{
+                console.log("updated the the project" , data);
+                docClient.scan({TableName : "Projects"} , function(err , data){
+                    if(err){
+                        console.log(err)
+                    }
+                    console.log(data.Items)
+                })
+            }
+        })
+      }
+      
+  }
+  
 
 
 }
@@ -392,21 +571,69 @@ function getLinkfromId(id){
 function logExport(info){
   var link = getLinkfromId(info.id);
   var full = false
-  Project.find({link : link} , function(err , project){
-    var done = project[0].exportsDone;
-    if(done == project[0].totalExports){
-      full = true;
-    }else{
-      project[0].exportsDone = done + 1;
-      project[0].exportsLog.push(info);
-    }
-    project[0].save()
+//   Project.find({link : link} , function(err , project){
+//     var done = project[0].exportsDone;
+//     if(done == project[0].totalExports){
+//       full = true;
+//     }else{
+//       project[0].exportsDone = done + 1;
+//       project[0].exportsLog.push(info);
+//     }
+//     project[0].save()
     
-  })
-  return full
+//   })
+//   return full
 
+// }
+   docClient.scan({TableName : "Projects"} , function(err , data){
+       if(err){
+           console.log(err)
+       }else{
+           data.Items.forEach((item)=>{
+               var id = item._id;
+               if(item.project.link == link){
+                   if(item.project.totalExports == item.project.exportsDone){
+                       full = true
+                       return full
+                   }else{
+                    
+                    var done = item.project.exportsDone + 1
+                    var log = {
+                        time :  Date.now()
+                    }
+                    var l = item.project.exportsLog
+                    l.push(log)
+                    var p = {
+                        TableName : "Project",
+                        Key : {
+                            "_id" : id 
+                        },
+                        UpdateExpression : "set #log = :l , #exp = :e",
+                        ExpressionAttributeValues : {
+                            ":l" : l,
+                            ":e" : done,
+                        },
+                        ExpressionAttributeNames : {
+                            "#log" : "exportsLog",
+                            "#exp" : "exportsDone"
+                        }
+                    }
+                    docClient.update(params , function(err , data){
+                        if(err){
+                            console.log("could not update the exports");
+                            console.log(err)
+                        }else{
+                            console.log("logged the exports!!!" , data)
+                        }
+                    })
+                    
+                   }
+                   
+               }
+           })
+       }
+   })
 }
-
 
 
 // saveNewProject(project1)
@@ -509,7 +736,36 @@ app.get("/projects" , function(req , res){
       
 
     })
-    res.send(list)
+
+    let scanned = []
+    var params = {
+        TableName : "Projects",
+    }
+    console.log(params)
+    docClient.scan(params , function(err , data){
+        if(err){
+            console.log(err)
+        }else{
+            // console.log(data.Items)
+            data.Items.forEach((d)=>{
+                var stuff  = {
+                    name : d.project.name,
+                    org : d.project.org,
+                    duration : d.project.duration,
+                    deadline : d.project.deadline,
+                    _id : d.project._id,
+                    totalExports : d.project.totalExports,
+                    exportsDone : d.project.exportsDone,
+                    exportsLog : d.project.exportsLog,
+                }
+                scanned.push(stuff)
+            });
+            console.log(scanned)
+            res.send(scanned)
+        }
+    })
+    
+    
     
   })
   
@@ -524,25 +780,54 @@ app.get("/members/:id" , function(req , res){
   const _id = req.params.id
 
   var list = []
-  Project.find({_id : _id} , function(err , project){
+  var params = {
+      TableName : "Projects",
+      Key : {
+          "_id" : _id,
+      }
+  }
+  var obj={}
+  docClient.get(params , function(err  , data){
     if(err){
-      console.log(err);
+
     }else{
-      const link = project[0].link
-      const checkpoints = project[0].checkpoints;
-      console.log(checkpoints)
-      project[0].members.forEach((member)=>{
-        const stuff = {
-          name : member.name,
-          role : member.role,
-          email : member.email,
-          _id : member._id
-        }
-        list.push(stuff)
-      })
-      res.send({list : list , link : link , checkpoints : checkpoints});
+        obj["link"] = data.Item.project.link;
+        obj["checkpoints"] = data.Item.project.checkpoints;
+        var l = []
+        var m = data.Item.project.members;
+        m.forEach((member)=>{
+            var s = {
+                name : member.name,
+                role : member.role,
+                email : member.email,
+            }
+            // console.log(s)
+            l.push(s)
+        })
+        obj["list"] = l
+        console.log(obj)
+        res.send(obj)
     }
   })
+//   Project.find({_id : _id} , function(err , project){
+//     if(err){
+//       console.log(err);
+//     }else{
+//       const link = project[0].link
+//       const checkpoints = project[0].checkpoints;
+//       console.log(checkpoints)
+//       project[0].members.forEach((member)=>{
+//         const stuff = {
+//           name : member.name,
+//           role : member.role,
+//           email : member.email,
+//           _id : member._id
+//         }
+//         list.push(stuff)
+//       })
+//       res.send({list : list , link : link , checkpoints : checkpoints});
+//     }
+//   })
 
 })
 
@@ -618,7 +903,7 @@ app.get("/log-export/:id" , function(req , res){
   // }else{
   //   var info = req.body.info;
   // }
-  let info = {id : req.params.id}
+  let info = {id : req.params.id , time : new Date().getTime()}
   
   var full = logExport(info);
   if(full){
@@ -672,4 +957,3 @@ app.listen(port, () => {
 
 
 
-// AddCheckPoints()
