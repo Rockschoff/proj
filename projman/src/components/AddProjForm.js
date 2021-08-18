@@ -21,6 +21,7 @@ export default function AddProjForm(props) {
   const [org, setOrg] = useState("");
   const [duration, setDuration] = useState("");
   const [showForm, setShowForm] = useState({ display: "true" });
+  const [exportLimit , setExportLimit] = useState(10)
 
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
@@ -37,7 +38,7 @@ export default function AddProjForm(props) {
       special: [],
       status: "Ongoing",
       duration: duration,
-      totalExports: 10,
+      totalExports: exportLimit,
     };
 
     sendToBackend(obj);
@@ -103,6 +104,16 @@ export default function AddProjForm(props) {
                 placeholder="(Ex : 60s)"
                 onChange={(e) => {
                   setDuration(e.target.value);
+                }}
+              />
+            </Form.Group>
+            <Form.Group as={Col} controlId="formGridPassword">
+              <Form.Label>Export Limit</Form.Label>
+              <Form.Control
+                type="number"
+                placeholder={exportLimit}
+                onChange={(e) => {
+                  setExportLimit(e.target.value);
                 }}
               />
             </Form.Group>

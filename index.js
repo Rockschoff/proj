@@ -459,16 +459,17 @@ function DeleteProject(obj ){
           let sheet = getIdFromLink(link)
           deleteFile(sheet)
         // console.log(data)
+        docClient.delete(params  , function(err , data){
+          if(err){
+              console.log("could not delete from dynamo");
+          }else{
+              console.log("SUCCESS in DELETION");
+          }
+      });
 
       }
   })
-  docClient.delete(params  , function(err , data){
-      if(err){
-          console.log("could not delete from dynamo");
-      }else{
-          console.log("SUCCESS in DELETION");
-      }
-  });
+  
 
 }
 

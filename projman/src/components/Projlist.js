@@ -27,6 +27,8 @@ export default function Projlist(props) {
           org = {proj.org}
           duration = {proj.duration}
           _id = {proj._id}
+          totalExports ={proj.totalExports}
+          deadline = {proj.deadline}
           token = {props.token}
           profile = {props.profile}
         />

@@ -25,6 +25,7 @@ const EditModal = (props) => {
   const [name, setName] = React.useState("#SAME");
   const [org, setOrg] = React.useState("#SAME");
   const [duration, setDuration] = React.useState("#SAME");
+  const [totalExports, setTotalExports] = React.useState(6969);
   const [validity, setValidity] = React.useState(new Date(props.deadline));
 
   function editRequest() {
@@ -34,11 +35,15 @@ const EditModal = (props) => {
       org: org,
       duration: duration,
       deadline: validity.toString(),
+      totalExports : totalExports,
       project: props._id,
     };
+    if (totalExports == 6969){
+      obj.totalExports = "#SAME"
+    }
 
     EditSend(obj, "project");
-  }
+    }
 
   return (
     <Modal
@@ -59,6 +64,7 @@ const EditModal = (props) => {
           <li>org : {props.org}</li>
           <li>status : {props.duration}</li>
           <li>validity : {props.deadline}</li>
+          <li>Export Limit : {props.totalExports}</li>
         </ul>
         <Form>
           <Form.Group controlId="formGridPassword" style={{ display: false }}>
@@ -88,6 +94,16 @@ const EditModal = (props) => {
               placeholder="Expected Duration"
               onChange={(e) => {
                 setDuration(e.target.value);
+              }}
+            />
+          </Form.Group>
+          <Form.Group controlId="formGridPassword" style={{ display: false }}>
+            <Form.Label>Export Limit</Form.Label>
+            <Form.Control
+              type="number"
+              placeholder={props.totalExports}
+              onChange={(e) => {
+                setTotalExports(e.target.value);
               }}
             />
           </Form.Group>
@@ -134,7 +150,8 @@ function ProjectEdit(props) {
     window.location.reload();
   }
 
-  console.log("++++++++++++++++++++++++++++++++++" + props.deadline);
+  console.log("++++++++++++++++++++++++++++++++++");
+  console.log(props)
   const DDButton = (props) => {
     const history = useHistory();
     return (
@@ -216,6 +233,7 @@ function ProjectEdit(props) {
           org={props.org}
           duration={props.duration}
           _id={props._id}
+          totalExports = {props.totalExports}
           deadline={props.deadline}
         />
       </>
@@ -229,6 +247,7 @@ function ProjectEdit(props) {
       duration={props.duration}
       link={props.link}
       _id={props._id}
+      totalExports = {props.totalExports}
       deadline={props.deadline}
     />
   );

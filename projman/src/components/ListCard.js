@@ -49,6 +49,7 @@ function ListCard(props) {
         duration = {props.duration}
         link = {link}
         deadline = {props.deadline}
+        totalExports = {props.totalExports}
         _id= {props._id} />
 
     
